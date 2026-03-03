@@ -10,37 +10,35 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static com.azucher.paginationgrille.back.application.SortField.PROJECT_NAME;
-import static com.azucher.paginationgrille.back.infrastructure.ClientProjectSpecifications.*;
+import static com.azucher.paginationgrille.back.infrastructure.ClientProjectViewSpecifications.*;
 
 @Component
 public class JPAFindClientProjects implements FindClientProjects {
-    private final JPAClientProjectRepository clientProjectRepository;
+    private final JPAClientProjectViewRepository clientProjectViewRepository;
 
-    public JPAFindClientProjects(JPAClientProjectRepository clientProjectRepository) {
-        this.clientProjectRepository = clientProjectRepository;
+    public JPAFindClientProjects(JPAClientProjectViewRepository clientProjectViewRepository) {
+        this.clientProjectViewRepository = clientProjectViewRepository;
     }
 
     @Override
     public List<ClientProject> find(ClientProjectsQuery query) {
         Sort sort = buildSort(query.sortCriteriaList());
         PageRequest pageRequest = PageRequest.of(query.page() - 1, query.pageSize(), sort);
-        Specification<ProjectEntity> spec = Specification
-                .where(withFetchClient())
-                .and(withClientName(query.clientName()))
+        Specification<ClientProjectView> spec = Specification
+                .where(withClientName(query.clientName()))
                 .and(withProjectStatus(query.projectStatus()))
                 .and(withClientNameStartsWith(query.clientNameStartsWith()));
 
-        Page<ProjectEntity> page = clientProjectRepository.findAll(spec, pageRequest);
+        Page<ClientProjectView> page = clientProjectViewRepository.findAll(spec, pageRequest);
 
         return page.getContent().stream()
-                .map(p -> new ClientProject(p.getName(), p.getClient().getName()))
+                .map(clientProjectView -> new ClientProject(clientProjectView.projectName(), clientProjectView.clientName()))
                 .toList();
     }
 
     private Sort buildSort(List<SortCriteria> sortCriteriaList) {
         if (sortCriteriaList == null || sortCriteriaList.isEmpty()) {
-            return Sort.by("name").ascending();
+            return Sort.by("projectName").ascending();
         }
         return sortCriteriaList.stream()
                 .map(sc -> sc.direction() == SortDirection.ASC
@@ -51,8 +49,8 @@ public class JPAFindClientProjects implements FindClientProjects {
 
     private String toPropertyPath(SortField field) {
         return switch (field) {
-            case PROJECT_NAME -> "name";
-            case CLIENT_NAME  -> "client.name";
+            case PROJECT_NAME -> "projectName";
+            case CLIENT_NAME  -> "clientName";
         };
     }
 }

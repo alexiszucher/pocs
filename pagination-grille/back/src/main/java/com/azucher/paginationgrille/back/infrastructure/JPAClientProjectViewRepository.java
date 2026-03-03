@@ -5,5 +5,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Component;
 
 @Component
-public interface JPAClientProjectRepository extends JpaRepository<ProjectEntity, String>, JpaSpecificationExecutor<ProjectEntity> {
-}
+public interface JPAClientProjectViewRepository
+        extends JpaRepository<ClientProjectView, String>,
+        JpaSpecificationExecutor<ClientProjectView> {}
