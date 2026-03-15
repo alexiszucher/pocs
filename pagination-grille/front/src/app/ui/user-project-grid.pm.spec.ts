@@ -1,6 +1,6 @@
 import { UserProjectGridPm } from './user-project-grid.pm';
 import UserProjectFinder, { UserProject } from '../application/UserProjectFinder';
-import {Observable, of} from 'rxjs';
+import {firstValueFrom, Observable, of} from 'rxjs';
 
 describe('UserProjectGridPm', () => {
   it('devrait exposer les colonnes de la grille user project', () => {
@@ -9,16 +9,23 @@ describe('UserProjectGridPm', () => {
     expect(fields).toEqual(["checkbox", 'nom', 'projet']);
   });
 
-  it('devrait exposer les données des utilisateurs avec projet', () => {
+  it('devrait avoir un filtre texte sur la colonne nom', () => {
+    const pm = new UserProjectGridPm(new FakeUserProjectFinder());
+    const nomCol = pm.columns().find(col => col.field === 'nom');
+    expect(nomCol?.filter).toBe('agTextColumnFilter');
+  });
+
+  it('devrait exposer les données des utilisateurs avec projet', async () => {
     const userProjectFinder = new FakeUserProjectFinder();
     userProjectFinder.userProjects = [
       {nom: 'John Doe', projet: 'Project A' },
       {nom: 'Jane Smith', projet: 'Project B' },
     ];
     const pm = new UserProjectGridPm(userProjectFinder);
-    expect(pm.rowData().length).toBe(2);
-    expect(pm.rowData().some(row => row.nom ==='John Doe' && row.projet === 'Project A')).toBe(true);
-    expect(pm.rowData().some(row => row.nom ==='Jane Smith' && row.projet === 'Project B')).toBe(true);
+    const rowData = await firstValueFrom(pm.find(1, 100));
+    expect(rowData.length).toBe(2);
+    expect(rowData.some(row => row.nom ==='John Doe' && row.projet === 'Project A')).toBe(true);
+    expect(rowData.some(row => row.nom ==='Jane Smith' && row.projet === 'Project B')).toBe(true);
   });
 
   describe('Colonne checkbox', () => {
@@ -43,12 +50,35 @@ describe('UserProjectGridPm', () => {
       expect(checkboxCol?.hide).toBe(true);
     });
   });
+
+  describe('Pagination server-side', () => {
+    it('devrait avoir le modèle de grille à infinite', () => {
+      const pm = new UserProjectGridPm(new FakeUserProjectFinder());
+      expect(pm.gridOptions.rowModelType).toBe('infinite');
+    });
+
+    it('devrait avoir la pagination activée', () => {
+      const pm = new UserProjectGridPm(new FakeUserProjectFinder());
+      expect(pm.gridOptions.pagination).toBe(true);
+    });
+
+    it('devrait avoir une pageSize par défaut de 3', () => {
+      const pm = new UserProjectGridPm(new FakeUserProjectFinder());
+      expect(pm.gridOptions.paginationPageSize).toBe(3);
+    });
+
+    it('devrait calculer page et pageSize depuis startRow et endRow', () => {
+      const pm = new UserProjectGridPm(new FakeUserProjectFinder());
+      expect(pm.pageRequestFromRange(0, 20)).toEqual({ page: 1, pageSize: 20 });
+      expect(pm.pageRequestFromRange(40, 60)).toEqual({ page: 3, pageSize: 20 });
+    });
+  });
 });
 
 class FakeUserProjectFinder implements UserProjectFinder {
     userProjects: UserProject[] = [];
 
-    findUserProjects(): Observable<UserProject[]> {
+    findUserProjects(page: number, pageSize: number): Observable<UserProject[]> {
         return of(this.userProjects);
     }
 }

@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { AgGridAngular } from 'ag-grid-angular';
 import {UserProjectGridPm} from './user-project-grid.pm';
 import {RestApiUserProjectFinder} from '../infrastructure/RestApiUserProjectFinder';
+import type { IDatasource, IGetRowsParams } from 'ag-grid-community';
 
 @Component({
   selector: 'user-project-grid',
@@ -14,11 +15,22 @@ import {RestApiUserProjectFinder} from '../infrastructure/RestApiUserProjectFind
 
     <ag-grid-angular
       style="width: 100%; height: 500px;"
-      [rowData]="pm.rowData()"
+      [datasource]="data"
       [columnDefs]="pm.columns()"
+      [gridOptions]="pm.gridOptions"
     />
   `
 })
 export class UserProjectGridComponent {
   readonly pm = new UserProjectGridPm(new RestApiUserProjectFinder());
+
+  readonly data: IDatasource = {
+    getRows: (params: IGetRowsParams) => {
+      const { page, pageSize } = this.pm.pageRequestFromRange(params.startRow, params.endRow);
+      this.pm.find(page, pageSize).subscribe({
+        next: (result) => params.successCallback(result, 50),
+        error: () => params.failCallback(),
+      });
+    },
+  };
 }

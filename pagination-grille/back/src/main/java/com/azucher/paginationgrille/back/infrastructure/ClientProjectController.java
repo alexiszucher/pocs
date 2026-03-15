@@ -2,6 +2,7 @@ package com.azucher.paginationgrille.back.infrastructure;
 
 import com.azucher.paginationgrille.back.application.FindClientProjects;
 import com.azucher.paginationgrille.back.readmodel.ClientProject;
+import org.springframework.data.repository.query.Param;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,7 +19,7 @@ public class ClientProjectController {
     }
 
     @GetMapping("/client-projects")
-    public List<ClientProject> getAllClientProjects() {
-        return findClientProjects.find(1, 10);
+    public List<ClientProject> getAllClientProjects(@Param("page") int page, @Param("pageSize") int pageSize) {
+        return findClientProjects.find(page, pageSize);
     }
 }

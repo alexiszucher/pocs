@@ -1,6 +1,7 @@
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, GridOptions } from 'ag-grid-community';
 import {signal} from '@angular/core';
 import UserProjectFinder from '../application/UserProjectFinder';
+import {map, Observable} from 'rxjs';
 
 export interface UserProjectRow {
   nom: string;
@@ -15,7 +16,10 @@ const COLUMNS: ColDef[] = [
     width: 50,
     hide: true,
   },
-  { field: 'nom' },
+  {
+    field: 'nom',
+    filter: 'agTextColumnFilter'
+  },
   { field: 'projet' },
 ];
 
@@ -23,15 +27,15 @@ export class UserProjectGridPm {
 
   private _isCheckboxVisible = false;
   columns = signal<ColDef[]>([]);
-  rowData = signal<UserProjectRow[]>([]);
+  readonly gridOptions: GridOptions = {
+    rowModelType: 'infinite',
+    pagination: true,
+    paginationPageSize: 3,
+    cacheBlockSize: 3,
+  };
 
-  constructor(userProjectFinder: UserProjectFinder) {
+  constructor(readonly userProjectFinder: UserProjectFinder) {
     this.columns.set(COLUMNS);
-    userProjectFinder.findUserProjects().subscribe(userProjects => {
-      const rows = userProjects.map(userProject => ({nom: userProject.nom, projet: userProject.projet} as UserProjectRow));
-      this.rowData.set(rows);
-      console.log(this.rowData());
-    });
   }
 
   get isCheckboxVisible(): boolean {
@@ -46,6 +50,20 @@ export class UserProjectGridPm {
           ? { ...col, hide: !this._isCheckboxVisible }
           : col
       )
+    );
+  }
+
+  pageRequestFromRange(startRow: number, endRow: number): { page: number; pageSize: number } {
+    const pageSize = endRow - startRow;
+    return { page: startRow / pageSize + 1, pageSize };
+  }
+
+  find(page: number, pageSize: number): Observable<UserProjectRow[]> {
+    return this.userProjectFinder.findUserProjects(page, pageSize).pipe(
+      map(userProjects => userProjects.map(userProject => ({
+        nom: userProject.nom,
+        projet: userProject.projet,
+      } as UserProjectRow)))
     );
   }
 }
