@@ -13,6 +13,10 @@ describe('UserProjectGridPm', () => {
     const pm = new UserProjectGridPm(new FakeUserProjectFinder());
     const nomCol = pm.columns().find(col => col.field === 'nom');
     expect(nomCol?.filter).toBe('agTextColumnFilter');
+    expect(nomCol?.filterParams).toStrictEqual({
+      filterOptions: ['contains'],
+      maxNumConditions: 1,
+    });
   });
 
   it('devrait exposer les données des utilisateurs avec projet', async () => {
@@ -22,7 +26,7 @@ describe('UserProjectGridPm', () => {
       {nom: 'Jane Smith', projet: 'Project B' },
     ];
     const pm = new UserProjectGridPm(userProjectFinder);
-    const rowData = await firstValueFrom(pm.find(1, 100));
+    const rowData = await firstValueFrom(pm.find(1, 100, {}));
     expect(rowData.length).toBe(2);
     expect(rowData.some(row => row.nom ==='John Doe' && row.projet === 'Project A')).toBe(true);
     expect(rowData.some(row => row.nom ==='Jane Smith' && row.projet === 'Project B')).toBe(true);
@@ -71,6 +75,36 @@ describe('UserProjectGridPm', () => {
       const pm = new UserProjectGridPm(new FakeUserProjectFinder());
       expect(pm.pageRequestFromRange(0, 20)).toEqual({ page: 1, pageSize: 20 });
       expect(pm.pageRequestFromRange(40, 60)).toEqual({ page: 3, pageSize: 20 });
+    });
+  });
+
+  describe('Filtres', () => {
+
+    it('devrait retourner un filtre vide si aucun filtre appliqué', () => {
+      const pm = new UserProjectGridPm(new FakeUserProjectFinder());
+      expect(pm.filtersFromModel({})).toEqual({});
+    });
+
+    it('devrait extraire la valeur contains du filterModel AG Grid', () => {
+      const pm = new UserProjectGridPm(new FakeUserProjectFinder());
+      expect(pm.filtersFromModel({
+        nom: { filterType: 'text', type: 'contains', filter: 'John' }
+      })).toEqual({ nom: 'John' });
+    });
+
+    it('devrait ignorer les filtres sans valeur', () => {
+      const pm = new UserProjectGridPm(new FakeUserProjectFinder());
+      expect(pm.filtersFromModel({
+        nom: { filterType: 'text', type: 'contains', filter: null }
+      })).toEqual({});
+    });
+
+    it('devrait gérer plusieurs filtres simultanés', () => {
+      const pm = new UserProjectGridPm(new FakeUserProjectFinder());
+      expect(pm.filtersFromModel({
+        nom: { filterType: 'text', type: 'contains', filter: 'John' },
+        projet: { filterType: 'text', type: 'contains', filter: 'Alpha' },
+      })).toEqual({ nom: 'John', projet: 'Alpha' });
     });
   });
 });

@@ -1,6 +1,6 @@
 import type { ColDef, GridOptions } from 'ag-grid-community';
 import {signal} from '@angular/core';
-import UserProjectFinder from '../application/UserProjectFinder';
+import UserProjectFinder, {UserProjectFilters} from '../application/UserProjectFinder';
 import {map, Observable} from 'rxjs';
 
 export interface UserProjectRow {
@@ -18,7 +18,11 @@ const COLUMNS: ColDef[] = [
   },
   {
     field: 'nom',
-    filter: 'agTextColumnFilter'
+    filter: 'agTextColumnFilter',
+    filterParams: {
+      filterOptions: ['contains'],
+      maxNumConditions: 1,
+    },
   },
   { field: 'projet' },
 ];
@@ -58,12 +62,21 @@ export class UserProjectGridPm {
     return { page: startRow / pageSize + 1, pageSize };
   }
 
-  find(page: number, pageSize: number): Observable<UserProjectRow[]> {
-    return this.userProjectFinder.findUserProjects(page, pageSize).pipe(
+  find(page: number, pageSize: number, filters: UserProjectFilters): Observable<UserProjectRow[]> {
+    return this.userProjectFinder.findUserProjects(page, pageSize, filters).pipe(
       map(userProjects => userProjects.map(userProject => ({
         nom: userProject.nom,
         projet: userProject.projet,
       } as UserProjectRow)))
     );
+  }
+
+  filtersFromModel(filterModel: Record<string, any>): UserProjectFilters {
+    return Object.entries(filterModel)
+      .filter(([_, colFilter]) => colFilter.filter != null)
+      .reduce((userProjectFilters, [field, colFilter]) => ({
+        ...userProjectFilters,
+        [field]: colFilter.filter,
+      }), {} as UserProjectFilters);
   }
 }

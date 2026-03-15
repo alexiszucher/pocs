@@ -27,7 +27,9 @@ export class UserProjectGridComponent {
   readonly data: IDatasource = {
     getRows: (params: IGetRowsParams) => {
       const { page, pageSize } = this.pm.pageRequestFromRange(params.startRow, params.endRow);
-      this.pm.find(page, pageSize).subscribe({
+      const filters = this.pm.filtersFromModel(params.filterModel);
+
+      this.pm.find(page, pageSize, filters).subscribe({
         next: (result) => params.successCallback(result, 50),
         error: () => params.failCallback(),
       });
